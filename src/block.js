@@ -3,9 +3,7 @@
 var _ = require('./lodash');
 var $ = require('jquery');
 
-var Scribe = require('scribe-editor');
-var scribePluginFormatterPlainTextConvertNewLinesToHTML = require('scribe-plugin-formatter-plain-text-convert-new-lines-to-html');
-var scribePluginLinkPromptCommand = require('scribe-plugin-link-prompt-command');
+var ScribeInterface = require('./scribe-interface');
 
 var config = require('./config');
 var utils = require('./utils');
@@ -264,18 +262,16 @@ Object.assign(Block.prototype, SimpleBlock.fn, require('./block-validations'), {
     if (_.isUndefined(this._scribe)) {
       throw "No Scribe instance found to send a command to";
     }
-    var cmd = this._scribe.getCommand(cmdName);
-    this._scribe.el.focus();
-    cmd.execute();
+
+    return ScribeInterface.execTextBlockCommand(this._scribe, cmdName);
   },
 
   queryTextBlockCommandState: function(cmdName) {
     if (_.isUndefined(this._scribe)) {
       throw "No Scribe instance found to query command";
     }
-    var cmd = this._scribe.getCommand(cmdName),
-        sel = new this._scribe.api.Selection();
-    return sel.range && cmd.queryState();
+
+    return ScribeInterface.queryTextBlockCommandState(this._scribe, cmdName);
   },
 
   _handleContentPaste: function(ev) {
@@ -350,19 +346,9 @@ Object.assign(Block.prototype, SimpleBlock.fn, require('./block-validations'), {
     var textBlock = this.getTextBlock().get(0);
     if (!_.isUndefined(textBlock) && _.isUndefined(this._scribe)) {
 
-      var scribeConfig = {debug: config.scribeDebug};
-      if (_.isObject(this.scribeOptions)) {
-        scribeConfig = Object.assign(scribeConfig, this.scribeOptions);
-      }
-
-      this._scribe = new Scribe(textBlock, scribeConfig);
-
-      this._scribe.use(scribePluginFormatterPlainTextConvertNewLinesToHTML());
-      this._scribe.use(scribePluginLinkPromptCommand());
-
-      if (_.isFunction(this.configureScribe)) {
-        this.configureScribe.call(this, this._scribe);
-      }
+      this._scribe = ScribeInterface.initScribeInstance(textBlock,
+                                                        this.scribeOptions,
+                                                        this.configureScribe);
     }
   },
 

@@ -10917,9 +10917,11 @@ module.exports = {
 var _ = require('../lodash');
 
 var Block = require('../block');
-var stToHTML = require('../to-html');
+var Scribe = require('scribe-editor');
+var scribePluginFormatterPlainTextConvertNewLinesToHTML = require('scribe-plugin-formatter-plain-text-convert-new-lines-to-html');
+var scribePluginLinkPromptCommand = require('scribe-plugin-link-prompt-command');
 
-var template = '<div class="st-text-block st-required" contenteditable="true"><ul><li></li></ul></div>';
+var config = require('../config');
 
 module.exports = Block.extend({
 
@@ -10927,52 +10929,76 @@ module.exports = Block.extend({
 
   title: function() { return i18n.t('blocks:list:title'); },
 
+  scribeOptions: { allowBlockElements: false },
+
+  editorHTML: '<ul class="st-list-block__list"><a href="#" class="st-list-block__add-new">Add</a></ul>',
+
+  lineItemEditorHTML: '<li class="st-list-block__item"><div class="st-block__editor"></div></li>',
+
   icon_name: 'list',
 
-  editorHTML: function() {
-    return _.template(template, this);
+  editors : [],
+
+  loadData: function(data) {
+    if (this.options.convertFromMarkdown && !data.isHtml) {
+      data = this.parseFromMarkdown(data.text);
+    }
+
+    data.listItems.forEach(function(li) {
+      this.addNewItem(li);
+    });
   },
 
-  loadData: function(data){
-    if (this.options.convertFromMarkdown && !data.isHtml) {
-      this.setTextBlockHTML("<ul>" + stToHTML(data.text, this.type) + "</ul>");
-    } else {
-      this.setTextBlockHTML(data.text);
+  addNewItem: function(item) {
+    console.log('add new clicked');
+    this.$inner.find('ul').append(this.lineItemEditorHTML);
+    var itemEditor = this.$inner.find('.st-block__editor[contenteditable!="true"]');
+
+    itemEditor
+        .bind('keyup', this.getSelectionForFormatter)
+        .bind('mouseup', this.getSelectionForFormatter)
+        .bind('DOMNodeInserted', this.clearInsertedStyles);
+
+    var scribeConfig = {debug: config.scribeDebug};
+    if (_.isObject(this.scribeOptions)) {
+      scribeConfig = Object.assign(scribeConfig, this.scribeOptions);
     }
+
+    var scribe = new Scribe(itemEditor.get(0), scribeConfig);
+    scribe.use(scribePluginFormatterPlainTextConvertNewLinesToHTML());
+    scribe.use(scribePluginLinkPromptCommand());
+
+    this.editors.push(scribe);
+  },
+
+  _serializeData: function() {
+  },
+
+  parseFromMarkdown: function(markdown) {
+    var listItems = markdown.replace(/^ - (.+)$/mg,"<li>$1</li>").split("\n");
+    return { listItems: listItems, isHtml: true };
   },
 
   onBlockRender: function() {
-    this.checkForList = this.checkForList.bind(this);
-    this.getTextBlock().on('click keyup', this.checkForList);
+    var self = this;
+    this.$el.find('.st-list-block__add-new').click(function() {
+      self.addNewItem();
+    });
     this.focus();
   },
 
-  checkForList: function() {
-    if (this.$('ul').length === 0) {
-      document.execCommand("insertUnorderedList", false, false);
-    }
-  },
-
-  toHTML: function(html) {
-    html = html.replace(/^ - (.+)$/mg,"<li>$1</li>")
-               .replace(/\n/mg, "");
-
-    return html;
-  },
-
-  onContentPasted: function(event, target) {
-    this.$('ul').html(
-      this.pastedMarkdownToHTML(target[0].innerHTML));
-    this.getTextBlock().caretToEnd();
-  },
-
   isEmpty: function() {
-    return _.isEmpty(this.getBlockData().text);
-  }
+    var data = this.getBlockData();
 
+    if (!data.isHtml) {
+      return _.isEmpty(data.text);
+    } else {
+      return data.listItems.length;
+    }
+  }
 });
 
-},{"../block":146,"../lodash":178,"../to-html":182}],158:[function(require,module,exports){
+},{"../block":146,"../config":162,"../lodash":178,"scribe-editor":132,"scribe-plugin-formatter-plain-text-convert-new-lines-to-html":135,"scribe-plugin-link-prompt-command":136}],158:[function(require,module,exports){
 "use strict";
 
 /*
