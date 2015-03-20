@@ -1,133 +1,170 @@
 "use strict";
 
-var _ = require('../lodash');
-
 var Block = require('../block');
-var ScribeInterface = require('../scribe-interface');
+var stToHTML = require('../to-html');
 
-var ScribeListBlockPlugin = function(scribe) {
-  var block = this;
+var ScribeListBlockPlugin = function(block) {
+  return function(scribe) {
+    scribe.el.addEventListener('keydown', function(ev) {
+      var selection, range;
 
-  scribe.el.addEventListener('focus', function() {
-    // move caret to the end
-  });
+      if (ev.keyCode === 13 && !ev.shiftKey) { // enter pressed
+        ev.preventDefault();
 
-  scribe.el.addEventListener('keydown', function(ev) {
-    if (ev.keyCode == 13 && !ev.shiftKey) { // enter pressed
-      block.addNewItem();
-      ev.preventDefault();
-      return false;
-    } else if (ev.keyCode == 8) {
-      if (scribe.getContent() == 0) {
-        block.removeCurrentItem();
+        // copy what's right of caret to
+        // new list item
+        selection = new scribe.api.Selection();
+        range = selection.range.cloneRange();
+        range.collapse(false);
+        range.setEndAfter(scribe.el.lastChild, 0);
+
+        var div = document.createElement('div');
+        div.appendChild(range.extractContents());
+
+        block.addListItemAfterCurrent(div.innerHTML);
+      } else if (ev.keyCode === 8 && !block.hasLastListItem()) { // backspace pressed
+        selection = new scribe.api.Selection();
+        range = selection.range.cloneRange();
+
+        if (scribe.getContent().length == 0) {
+          block.removeCurrentListItem();
+        } else if (range.startOffset === 0) {
+          range.collapse(false);
+          range.setEndAfter(scribe.el.lastChild, 0);
+
+          var html = range.extractContents();
+
+          block.removeCurrentListItem();
+          block.appendToCurrentItem(html);
+        }
       }
-    }
-  });
+    });
+  };
 };
 
+
 module.exports = Block.extend({
-
   type: 'list',
-
   title: function() { return i18n.t('blocks:list:title'); },
+  icon_name: 'list',
+  multi_editable: true,
 
   scribeOptions: { allowBlockElements: false },
+  configureScribe: function(scribe) {
+    scribe.use(new ScribeListBlockPlugin(this));
+  },
 
   editorHTML: '<ul class="st-list-block__list"></ul>',
+  listItemEditorHTML: '<li class="st-list-block__item"><div class="st-block__editor"></div></li>',
 
-  lineItemEditorHTML: '<li class="st-list-block__item"><div class="st-block__editor"></div></li>',
+  initialize: function() {
+    this.editorIds = [];
+  },
 
-  icon_name: 'list',
+  // Data functions (loading, converting, saving)
+  beforeLoadingData: function() {
+    this.setupListVariables();
 
-  editors : {},
+    this.loadData(this._getData());
+  },
+
+  onBlockRender: function() {
+    if (!this.ul) { this.setupListVariables(); }
+    if (this.editorIds.length < 1) { this.addListItem(); }
+  },
+
+  setupListVariables: function() {
+    this.$ul = this.$inner.find('ul');
+    this.ul = this.$ul.get(0);
+  },
 
   loadData: function(data) {
+    var block = this;
     if (this.options.convertFromMarkdown && !data.isHtml) {
       data = this.parseFromMarkdown(data.text);
     }
 
     if (data.listItems.length) {
       data.listItems.forEach(function(li) {
-        this.addNewItem(li);
+        block.addListItem(li);
       });
     } else {
-      this.addNewItem();
+      block.addListItem();
     }
   },
 
-  // migration from old data format
   parseFromMarkdown: function(markdown) {
-    var listItems = markdown.replace(/^ - (.+)$/mg,"<li>$1</li>").split("\n");
+    var listItems = markdown.replace(/^ - (.+)$/mg,"$1").split("\n");
+    listItems = listItems.map(function(item) {
+      return stToHTML(item, this.type);
+    }.bind(this));
+
     return { listItems: listItems, isHtml: true };
   },
 
-  addNewItem: function(item) {
-    this.$ul.append(this.lineItemEditorHTML);
-    var itemEditor = this.$inner.find('.st-block__editor[contenteditable!="true"]');
-    var id = _.uniqueId('list-editor');
-    itemEditor.get(0).dataset.editorId = id;
-
-    itemEditor
-        .bind('keyup', this.getSelectionForFormatter)
-        .bind('mouseup', this.getSelectionForFormatter)
-        .bind('DOMNodeInserted', this.clearInsertedStyles);
-
-
-    var config = function(scribe) {
-      scribe.use(ScribeListBlockPlugin.bind(this));
-    }.bind(this);
-
-    var scribe = ScribeInterface.initScribeInstance(
-      itemEditor.get(0), this.scribeOptions, config);
-
-    itemEditor.focus();
-    this.editors[id] = scribe;
-  },
-
-  removeCurrentItem: function() {
-    if (Object.keys(this.editors).length > 1) {
-      var editor = this.getCurrentEditor();
-      var li = editor.el.parentNode;
-      this.$ul.get(0).removeChild(li);
-      delete this.editors[editor.el.dataset.editorId];
-      return true;
-    } else {
-      return false;
-    }
-  },
-
   _serializeData: function() {
+    var data = {isHtml: true, listItems: []};
+
+    this.editorIds.forEach(function(editorId) {
+      data.listItems.push(this.getTextEditor(editorId).scribe.getContent());
+    }.bind(this));
+
+    return data;
   },
 
-  onBlockRender: function() {
-    this.$ul = this.$inner.find('ul');
-    this.addNewItem();
+  // List Items manipulation functions (add, remove, etc)
+  addListItemAfterCurrent: function(content) {
+    this.addListItem(content, this.getCurrentTextEditor());
   },
 
-  execTextBlockCommand: function(cmdName) {
-    return ScribeInterface.execTextBlockCommand(this.getCurrentEditor(), cmdName);
-  },
+  addListItem: function(content, after) {
+    content = content || '';
+    if (content.trim() === "<br>") { content = ''; }
 
-  queryTextBlockCommandState: function(cmdName) {
-    return ScribeInterface.queryTextBlockCommandState(this.getCurrentEditor(), cmdName);
-  },
+    var editor = this.newTextEditor(this.listItemEditorHTML, content);
 
-  getCurrentEditor: function() {
-    var editor = this.editors[document.activeElement.dataset.editorId];
-    if (editor) {
-      this.currentEditor = editor;
-    }
+    if (after && this.ul.lastchild !== after.node) {
+      var before = after.node.nextSibling;
+      this.ul.insertBefore(editor.node, before);
 
-    return this.currentEditor;
-  },
-
-  isEmpty: function() {
-    var data = this.getBlockData();
-
-    if (!data.isHtml) {
-      return _.isEmpty(data.text);
+      var idx = this.editorIds.indexOf(after.id) + 1;
+      this.editorIds.splice(idx, 0, editor.id);
     } else {
-      return data.listItems.length;
+      this.$ul.append(editor.node);
+      this.editorIds.push(editor.id);
     }
+
+    editor.editor.focus();
+  },
+
+  focusOnNeighbour: function(item) {
+    var idx = this.editorIds.indexOf(item.id);
+    var neighbour = this.editorIds[idx - 1] || this.editorIds[idx + 1];
+
+    if (neighbour) {
+      var editorObj = this.getTextEditor(neighbour);
+      editorObj.editor.focus();
+    }
+  },
+
+  removeCurrentListItem: function() {
+    if (this.editorIds.length === 1) { return; }
+
+    var item = this.getCurrentTextEditor();
+    var idx = this.editorIds.indexOf(item.id);
+
+    this.focusOnNeighbour(item);
+    this.editorIds.splice(idx, 1);
+    this.ul.removeChild(item.node);
+    this.removeTextEditor(item.id);
+  },
+
+  appendToCurrentItem: function(content) {
+    this.appendToTextEditor(this.getCurrentTextEditor().id, content);
+  },
+
+  hasLastListItem: function() {
+    return this.editorIds.length === 1;
   }
+
 });

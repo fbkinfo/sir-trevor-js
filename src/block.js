@@ -60,13 +60,14 @@ Object.assign(Block.prototype, SimpleBlock.fn, require('./block-validations'), {
   toolbarEnabled: true,
 
   availableMixins: ['droppable', 'pastable', 'uploadable', 'fetchable',
-    'ajaxable', 'controllable'],
+    'ajaxable', 'controllable', 'multi_editable'],
 
   droppable: false,
   pastable: false,
   uploadable: false,
   fetchable: false,
   ajaxable: false,
+  multi_editable: false,
 
   drop_options: {},
   paste_options: {},
@@ -346,9 +347,11 @@ Object.assign(Block.prototype, SimpleBlock.fn, require('./block-validations'), {
     var textBlock = this.getTextBlock().get(0);
     if (!_.isUndefined(textBlock) && _.isUndefined(this._scribe)) {
 
-      this._scribe = ScribeInterface.initScribeInstance(textBlock,
-                                                        this.scribeOptions,
-                                                        this.configureScribe);
+      var configureScribe =
+        _.isFunction(this.configureScribe) ? this.configureScribe.bind(this) : null;
+      this._scribe = ScribeInterface.initScribeInstance(
+        textBlock, this.scribeOptions, configureScribe
+      );
     }
   },
 
