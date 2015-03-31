@@ -26,7 +26,7 @@ var ScribeListBlockPlugin = function(block) {
         selection = new scribe.api.Selection();
         range = selection.range.cloneRange();
 
-        if (scribe.getContent().length == 0) {
+        if (scribe.getContent().length === 0) {
           block.removeCurrentListItem();
         } else if (range.startOffset === 0) {
           range.collapse(false);
