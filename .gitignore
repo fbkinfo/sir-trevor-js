@@ -5,4 +5,5 @@ node_modules/
 _SpecRunner.html
 bower_components/
 components/
+server/
 .grunt

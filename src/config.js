@@ -75,11 +75,18 @@ module.exports = {
           text : "i"
         },
         {
+          name: "Strikethrough",
+          title: "strikethrough",
+          cmd: "strikethrough",
+          keyCode: 83,
+          text : "S̶"
+        },
+        {
           name: "Link",
           title: "link",
           iconName: "link",
           cmd: "linkPrompt",
-          text : "link",
+          text : "link!",
         },
         {
           name: "Unlink",
