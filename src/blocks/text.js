@@ -17,6 +17,15 @@ module.exports = Block.extend({
 
   icon_name: 'text',
 
+  onBlockRender: function() {
+    this.getTextBlock().on(
+      { 'click': function() {
+        var href = this.getAttribute('href');
+        window.open(href, '_blank');}
+      }, 'p a'
+    );
+  },
+
   loadData: function(data){
     if (this.options.convertFromMarkdown && !data.isHtml) {
       this.setTextBlockHTML(stToHTML(data.text, this.type));

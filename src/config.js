@@ -86,7 +86,7 @@ module.exports = {
           title: "link",
           iconName: "link",
           cmd: "linkPrompt",
-          text : "link!",
+          text : "link",
         },
         {
           name: "Unlink",

@@ -8,6 +8,7 @@ require('array.prototype.find');
 require('./vendor/array-includes'); // shims ES7 Array.prototype.includes
 
 require('./helpers/event'); // extends jQuery itself
+require('./helpers/tooltip'); // extends jQuery itself
 
 var utils = require('./utils');
 

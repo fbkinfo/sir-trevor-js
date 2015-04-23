@@ -267,6 +267,7 @@ Object.assign(Block.prototype, SimpleBlock.fn, require('./block-validations'), {
     var cmd = this._scribe.getCommand(cmdName);
     this._scribe.el.focus();
     cmd.execute();
+    $.fn.tooltip && $(this.getTextBlock()).find('p a').tooltip();
   },
 
   queryTextBlockCommandState: function(cmdName) {
