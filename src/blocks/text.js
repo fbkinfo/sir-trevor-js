@@ -18,7 +18,9 @@ module.exports = Block.extend({
   icon_name: 'text',
 
   onBlockRender: function() {
-    this.getTextBlock().on(
+    var tb = this.getTextBlock();
+    $.fn.tooltip && tb.find('p a').tooltip();
+    tb.on(
       { 'click': function() {
         var href = this.getAttribute('href');
         window.open(href, '_blank');}
