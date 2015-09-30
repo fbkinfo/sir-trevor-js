@@ -187,6 +187,8 @@ Object.assign(Block.prototype, SimpleBlock.fn, require('./block-validations'), {
       var content = this.getTextBlock().html();
       if (content.length > 0) {
         data.text = stToMarkdown(content, this.type);
+      } else {
+        data.text = '';
       }
     }
 
