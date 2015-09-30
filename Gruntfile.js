@@ -153,7 +153,7 @@ module.exports = function(grunt) {
       },
 
       options: {
-        loadPath: require('sass-bourbon').includePaths,
+        loadPath: require('node-bourbon').includePaths,
       },
     }
 
