@@ -169,8 +169,8 @@ Object.assign(Editor.prototype, require('./function-bind'), require('./events'),
     return this.store[method].call(this, options || {});
   },
 
-  renderBlock: function(block) {
-    this._renderInPosition(block.render().$el);
+  renderBlock: function(block, render_after_this_block) {
+    this._renderInPosition(block.render().$el, render_after_this_block);
     this.hideAllTheThings();
     this.scrollTo(block.$el);
 
@@ -200,8 +200,20 @@ Object.assign(Editor.prototype, require('./function-bind'), require('./events'),
     }
   },
 
-  _renderInPosition: function(block) {
-    if (this.block_controls.currentContainer) {
+  getPrevBlock: function ($block) {
+    var pos = this.getBlockPosition($block);
+    if (pos > 0) {
+      var block_id = this.$wrapper.find('.st-block').eq(pos - 1).attr('id');
+      return this.findBlockById(block_id);
+    } else {
+      return null;
+    }
+  },
+
+  _renderInPosition: function(block, render_after_this_block) {
+    if (render_after_this_block) {
+      render_after_this_block.after(block);
+    } else if (this.block_controls.currentContainer) {
       this.block_controls.currentContainer.after(block);
     } else {
       this.$wrapper.append(block);

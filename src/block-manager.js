@@ -35,7 +35,7 @@ Object.assign(BlockManager.prototype, require('./function-bind'), require('./med
 
   initialize: function() {},
 
-  createBlock: function(type, data) {
+  createBlock: function(type, data, render_after_this_block) {
     type = utils.classify(type);
 
     // Run validations
@@ -45,7 +45,7 @@ Object.assign(BlockManager.prototype, require('./function-bind'), require('./med
     this.blocks.push(block);
 
     this._incrementBlockTypeCount(type);
-    this.mediator.trigger('block:render', block);
+    this.mediator.trigger('block:render', block, render_after_this_block);
 
     this.triggerBlockCountUpdate();
     this.mediator.trigger('block:limitReached', this.blockLimitReached());
