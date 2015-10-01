@@ -172,7 +172,6 @@ Object.assign(Editor.prototype, require('./function-bind'), require('./events'),
   renderBlock: function(block, render_after_this_block) {
     this._renderInPosition(block.render().$el, render_after_this_block);
     this.hideAllTheThings();
-    this.scrollTo(block.$el);
 
     block.trigger("onRender");
   },
