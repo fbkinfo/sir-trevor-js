@@ -12,6 +12,7 @@ var BlockMixins = require('./block_mixins');
 var SimpleBlock = require('./simple-block');
 var BlockReorder = require('./block-reorder');
 var BlockDeletion = require('./block-deletion');
+var BlockOptions = require('./block-options');
 var BlockPositioner = require('./block-positioner');
 var Formatters = require('./formatters');
 var EventBus = require('./event-bus');
@@ -66,7 +67,7 @@ config.defaults.Block = {
 Object.assign(Block.prototype, SimpleBlock.fn, require('./block-validations'), {
 
   bound: [
-    "_handleContentPaste", "_onFocus", "_onBlur", "onDrop", "onDeleteClick",
+    "_handleContentPaste", "_onFocus", "_onBlur", "onDrop", "onDeleteClick", "onOptionsClick",
     "clearInsertedStyles", "getSelectionForFormatter", "onBlockRender",
   ],
 
@@ -102,6 +103,9 @@ Object.assign(Block.prototype, SimpleBlock.fn, require('./block-validations'), {
   upload_options: {},
 
   formattable: true,
+
+  //activate options button  toolbar
+  showoptions : false,
 
   _previousSelection: '',
 
@@ -268,6 +272,10 @@ Object.assign(Block.prototype, SimpleBlock.fn, require('./block-validations'), {
                        onDeleteDeny.bind(this));
   },
 
+  onOptionsClick: function(ev) {
+    ev.preventDefault();
+  },
+
   pastedMarkdownToHTML: function(content) {
     return stToHTML(stToMarkdown(content, this.type), this.type);
   },
@@ -313,6 +321,11 @@ Object.assign(Block.prototype, SimpleBlock.fn, require('./block-validations'), {
 
     this._withUIComponent(new BlockDeletion(), '.st-block-ui-btn--delete',
                           this.onDeleteClick);
+
+    if (this.showoptions) {
+        this._withUIComponent(new BlockOptions(), '.st-block-ui-btn--options',
+                              this.onOptionsClick);
+    }
 
     this.onFocus();
     this.onBlur();
