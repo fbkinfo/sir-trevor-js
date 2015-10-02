@@ -53,19 +53,25 @@ Object.assign(BlockPositioner.prototype, require('./function-bind'), require('./
   },
 
   renderPositionList: function() {
-    var inner = "<option value='0'>" + i18n.t("general:position") + "</option>";
+    var inner = '';
     for(var i = 1; i <= this.total_blocks; i++) {
       inner += "<option value="+i+">"+i+"</option>";
     }
     this.$select.html(inner);
   },
 
+  updatePositionListDefault: function() {
+    var blockByPosition = this.$block.parent().find('.st-block').index(this.$block) + 1;
+    this.$select.val(blockByPosition);
+  },
+
   toggle: function() {
-    this.$select.val(0);
+    this.updatePositionListDefault();
     this.$el.toggleClass(this.visibleClass);
   },
 
   show: function(){
+    this.updatePositionListDefault();
     this.$el.addClass(this.visibleClass);
   },
 
