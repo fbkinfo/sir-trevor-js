@@ -40,9 +40,10 @@ module.exports = function(content, type) {
                     .replace(/\_/g, "\\_")
                     .replace(/\(/g, "\\(")
                     .replace(/\)/g, "\\)")
-                    .replace(/\-/g, "\\-");
+                    .replace(/\-/g, "\\-")
+                    .replace(/~/g, "\\~");
 
-  var inlineTags = ["em", "i", "strong", "b"];
+  var inlineTags = ["em", "i", "strong", "b", "strike"];
 
   for (i = 0; i< inlineTags.length; i++) {
     tagStripper = new RegExp('<'+inlineTags[i]+'><br></'+inlineTags[i]+'>', 'gi');
@@ -59,11 +60,20 @@ module.exports = function(content, type) {
     return "_" + p1.replace(/<(.)?br(.)?>/g, '') + "_" + p2;
   }
 
+  function replaceStrike(match, p1, p2){
+    if(_.isUndefined(p2)) { p2 = ''; }
+    return "~~" + p1.replace(/<(.)?br(.)?>/g, '') + "~~" + p2;
+  }
+
   markdown = markdown.replace(/<(\w+)(?:\s+\w+="[^"]+(?:"\$[^"]+"[^"]+)?")*>\s*<\/\1>/gim, '') //Empty elements
                       .replace(/\n/mg,"")
+                      .replace(/<abbr.*?title=[""'](.*?)[""'].*?>(.*?)<\/abbr>/gim, function(match, p1, p2){
+                        return "[" + p2.trim().replace(/<(.)?br(.)?>/g, '') + "]{"+ p1 +"}";
+                      }) // Hints
                       .replace(/<a.*?href=[""'](.*?)[""'].*?>(.*?)<\/a>/gim, function(match, p1, p2){
                         return "[" + p2.trim().replace(/<(.)?br(.)?>/g, '') + "]("+ p1 +")";
                       }) // Hyperlinks
+                      .replace(/<strike>(?:\s*)(.*?)(\s*)?<\/strike>/gim, replaceStrike)
                       .replace(/<strong>(?:\s*)(.*?)(\s)*?<\/strong>/gim, replaceBolds)
                       .replace(/<b>(?:\s*)(.*?)(\s*)?<\/b>/gim, replaceBolds)
                       .replace(/<em>(?:\s*)(.*?)(\s*)?<\/em>/gim, replaceItalics)

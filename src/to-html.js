@@ -26,6 +26,10 @@ module.exports = function(markdown, type) {
     return "<a href='"+p2+"'>"+p1.replace(/\n/g, '')+"</a>";
   });
 
+  html = html.replace(/\[([^\]]+)\]\{([^\}]+)\}/gm,function(match, p1, p2){
+    return "<abbr title='"+p2+"'>" + p1.replace(/\n/g, '').replace(/"/g, '&quote;')+"</abbr>";
+  });
+
   // This may seem crazy, but because JS doesn't have a look behind,
   // we reverse the string to regex out the italic items (and bold)
   // and look for something that doesn't start (or end in the reversed strings case)
@@ -34,6 +38,9 @@ module.exports = function(markdown, type) {
            utils.reverse(html)
            .replace(/_(?!\\)((_\\|[^_])*)_(?=$|[^\\])/gm, function(match, p1) {
               return ">i/<"+ p1.replace(/\n/g, '').replace(/[\s]+$/,'') +">i<";
+           })
+           .replace(/~~(?!\\)((~~\\|[^~~])*)~~(?=$|[^\\])/gm, function(match, p1){
+              return ">ekirts/<"+ p1.replace(/\r?\n/g, '').replace(/[\s]+$/,'') +">ekirts<";
            })
            .replace(/\*\*(?!\\)((\*\*\\|[^\*\*])*)\*\*(?=$|[^\\])/gm, function(match, p1){
               return ">b/<"+ p1.replace(/\n/g, '').replace(/[\s]+$/,'') +">b<";
@@ -71,6 +78,7 @@ module.exports = function(markdown, type) {
 
   html = html.replace(/\t/g, "&nbsp;&nbsp;&nbsp;&nbsp;")
              .replace(/\n/g, "<br>")
+             .replace(/~~/, "")
              .replace(/\*\*/, "")
              .replace(/__/, "");  // Cleanup any markdown characters left
 
@@ -81,7 +89,8 @@ module.exports = function(markdown, type) {
              .replace(/\\\_/g, "_")
              .replace(/\\\(/g, "(")
              .replace(/\\\)/g, ")")
-             .replace(/\\\-/g, "-");
+             .replace(/\\\-/g, "-")
+             .replace(/\\~/g, "~");
 
   if (shouldWrap) {
     html += "</div>";
