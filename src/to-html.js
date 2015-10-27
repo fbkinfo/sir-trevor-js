@@ -27,7 +27,7 @@ module.exports = function(markdown, type) {
   });
 
   html = html.replace(/\[([^\]]+)\]\{([^\}]+)\}/gm,function(match, p1, p2){
-    return "<abbr title='"+p2+"'>" + p1.replace(/\n/g, '').replace(/"/g, '&quote;')+"</abbr>";
+    return "<abbr title='"+p2+"'>" + p1.replace(/\n/g, '')+"</abbr>";
   });
 
   // This may seem crazy, but because JS doesn't have a look behind,
