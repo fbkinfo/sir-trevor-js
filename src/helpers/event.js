@@ -38,17 +38,24 @@ $.fn.noDropArea = function(){
   return this;
 };
 
-$.fn.caretToEnd = function(){
+function caretTo(node, toStart) {
   var range,selection;
 
   range = document.createRange();
-  range.selectNodeContents(this[0]);
-  range.collapse(false);
+  range.selectNodeContents(node);
+  range.collapse(toStart);
 
   selection = window.getSelection();
   selection.removeAllRanges();
   selection.addRange(range);
+}
 
+$.fn.caretToStart = function(){
+  caretTo(this[0], true);
   return this;
 };
 
+$.fn.caretToEnd = function(){
+  caretTo(this[0], false);
+  return this;
+};
