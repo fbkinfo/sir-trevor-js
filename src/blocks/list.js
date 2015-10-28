@@ -1,6 +1,7 @@
 "use strict";
 
 var _ = require('../lodash');
+var $ = require('jquery');
 
 var Block = require('../block');
 var stToHTML = require('../to-html');
@@ -25,8 +26,20 @@ module.exports = Block.extend({
 
   onBlockRender: function() {
     this.checkForList = this.checkForList.bind(this);
-    this.getTextBlock().on('click keyup', this.checkForList);
-    this.focus();
+    this.getTextBlock().on('click keyup focus', this.checkForList);
+    this.getTextBlock().on('keydown',this.handleShiftEnter.bind(this));
+  },
+
+  handleShiftEnter: function(event) {
+    if ( ! ( event.keyCode === 13 && event.shiftKey ) ) { return; }
+    event.preventDefault();
+    event.stopPropagation();
+    if ( this.isEmpty() ) { return; }
+    if ( ! window.getSelection ) { return; }
+    var currentLi = $( window.getSelection().getRangeAt( 0 ).startContainer ).closest( 'li' );
+    var newLi = $( '<li>' );
+    newLi.insertAfter( currentLi );
+    newLi.caretToStart();
   },
 
   checkForList: function() {
