@@ -1,118 +1,201 @@
-"use strict";
+'use strict';
 
-var _ = require('./lodash');
-var utils = require('./utils');
-
-module.exports = function(content, type) {
-
-  // Deferring requiring these to sidestep a circular dependency:
-  // Block -> this -> Blocks -> Block
-  var Blocks = require('./blocks');
-  var Formatters = require('./formatters');
-
-  type = utils.classify(type);
-
-  var markdown = content;
-
-  //Normalise whitespace
-  markdown = markdown.replace(/&nbsp;/g," ");
-
-  // First of all, strip any additional formatting
-  // MSWord, I'm looking at you, punk.
-  markdown = markdown.replace(/( class=(")?Mso[a-zA-Z]+(")?)/g, '')
-                     .replace(/<!--(.*?)-->/g, '')
-                     .replace(/\/\*(.*?)\*\//g, '')
-                     .replace(/<(\/)*(meta|link|span|\\?xml:|st1:|o:|font)(.*?)>/gi, '');
-
-  var badTags = ['style', 'script', 'applet', 'embed', 'noframes', 'noscript'],
-      tagStripper, i;
-
-  for (i = 0; i< badTags.length; i++) {
-    tagStripper = new RegExp('<'+badTags[i]+'.*?'+badTags[i]+'(.*?)>', 'gi');
-    markdown = markdown.replace(tagStripper, '');
-  }
-
-  // Escape anything in here that *could* be considered as MD
-  // Markdown chars we care about: * [] _ () -
-  markdown = markdown.replace(/\*/g, "\\*")
-                    .replace(/\[/g, "\\[")
-                    .replace(/\]/g, "\\]")
-                    .replace(/\_/g, "\\_")
-                    .replace(/\(/g, "\\(")
-                    .replace(/\)/g, "\\)")
-                    .replace(/\-/g, "\\-")
-                    .replace(/~/g, "\\~");
-
-  var inlineTags = ["em", "i", "strong", "b", "strike"];
-
-  for (i = 0; i< inlineTags.length; i++) {
-    tagStripper = new RegExp('<'+inlineTags[i]+'><br></'+inlineTags[i]+'>', 'gi');
-    markdown = markdown.replace(tagStripper, '<br>');
-  }
-
-  function replaceBolds(match, p1, p2){
-    if(_.isUndefined(p2)) { p2 = ''; }
-    return "**" + p1.replace(/<(.)?br(.)?>/g, '') + "**" + p2;
-  }
-
-  function replaceItalics(match, p1, p2){
-    if(_.isUndefined(p2)) { p2 = ''; }
-    return "_" + p1.replace(/<(.)?br(.)?>/g, '') + "_" + p2;
-  }
-
-  function replaceStrike(match, p1, p2){
-    if(_.isUndefined(p2)) { p2 = ''; }
-    return "~~" + p1.replace(/<(.)?br(.)?>/g, '') + "~~" + p2;
-  }
-
-  markdown = markdown.replace(/<(\w+)(?:\s+\w+="[^"]+(?:"\$[^"]+"[^"]+)?")*>\s*<\/\1>/gim, '') //Empty elements
-                      .replace(/\n/mg,"")
-                      .replace(/<abbr.*?title=[""'](.*?)[""'].*?>(.*?)<\/abbr>/gim, function(match, p1, p2){
-                        return "[" + p2.trim().replace(/<(.)?br(.)?>/g, '') + "]{"+ p1 +"}";
-                      }) // Hints
-                      .replace(/<a.*?href=[""'](.*?)[""'].*?>(.*?)<\/a>/gim, function(match, p1, p2){
-                        return "[" + p2.trim().replace(/<(.)?br(.)?>/g, '') + "]("+ p1 +")";
-                      }) // Hyperlinks
-                      .replace(/<strike>(?:\s*)(.*?)(\s*)?<\/strike>/gim, replaceStrike)
-                      .replace(/<strong>(?:\s*)(.*?)(\s)*?<\/strong>/gim, replaceBolds)
-                      .replace(/<b>(?:\s*)(.*?)(\s*)?<\/b>/gim, replaceBolds)
-                      .replace(/<em>(?:\s*)(.*?)(\s*)?<\/em>/gim, replaceItalics)
-                      .replace(/<i>(?:\s*)(.*?)(\s*)?<\/i>/gim, replaceItalics);
+var _ = require( './lodash' );
+var utils = require( './utils' );
 
 
-  // Use custom formatters toMarkdown functions (if any exist)
-  var formatName, format;
-  for(formatName in Formatters) {
-    if (Formatters.hasOwnProperty(formatName)) {
-      format = Formatters[formatName];
-      // Do we have a toMarkdown function?
-      if (!_.isUndefined(format.toMarkdown) && _.isFunction(format.toMarkdown)) {
-        markdown = format.toMarkdown(markdown);
-      }
-    }
-  }
+var normalizeWhitespaces = function ( content ) {
+
+  content = content
+    .replace( /&nbsp;/g, ' ' )
+    .replace( /\n/g, '' );
+
+  return content;
+
+};
+
+var normalizeBrTags = function ( content ) {
+
+  content = content.replace( /<br\/?>(\s*<\/br>)?/gi, '<br>' );
+
+  return content;
+
+};
+
+var removeBadThings = function ( content ) {
+
+  content = content
+    .replace( / class="?Mso[a-zA-Z]+"?/g, '' )
+    .replace( /<!--.*?-->/g, '' )
+    .replace( /\/\*.*?\*\//g, '' )
+    .replace( /<\/?(meta|link|span|\\?xml:|st1:|o:|font).*?>/gi, '' )
+    .replace( /<(style|script|applet|embed|noframes|noscript).*?\1.*?>/gi, '' );
+
+  return content;
+
+};
+
+var removeEmptyTags = function ( content ) {
+
+  content = content.replace( /<(\w+)(?:\s+\w+="[^"]+(?:"\$[^"]+"[^"]+)?")*>((?:\s*<br>\s*)*)*<\/\1>/gi, '$2' );
+
+  return content;
+
+};
+
+var escapeMarkdownChars = function ( content ) {
+
+  content = content
+    .replace( /\*/g, '\\*' )
+    .replace( /\[/g, '\\[' )
+    .replace( /\]/g, '\\]' )
+    .replace( /\_/g, '\\_' )
+    .replace( /\(/g, '\\(' )
+    .replace( /\)/g, '\\)' )
+    .replace( /\-/g, '\\-' )
+    .replace( /~/g, '\\~' );
+
+  return content;
+
+};
+
+var convertInlineTags = function ( content ) {
+
+  var replaceTagAndAttr = function ( symbols ) {
+
+    var openBody = symbols[ 0 ];
+    var closeBody = symbols[ 1 ];
+    var openData = symbols[ 2 ];
+    var closeData = symbols[ 3 ];
+
+    return function ( match, pAttr, pBefore, pText, pAfter ) { // jshint ignore:line
+
+      return openBody + pText.replace( /(^(?:<br>|\s)*|(?:<br>|\s)*$)/g, '' ).replace( /<br>/g, '\n' ) + closeBody + openData + pAttr + closeData;
+
+    };
+
+  };
+
+  var replaceTag = function ( mark ) {
+
+    return function ( match, pBefore, pText, pAfter ) {
+
+      return mark + pText.replace( /(^(?:<br>|\s)*|(?:<br>|\s)*$)/g, '' ).replace( /<br>/g, '\n' ) + mark + pAfter;
+
+    };
+
+  };
+
+  content = content
+    .replace( /<abbr.*?title=[""'](.*?)[""'].*?>(\s*)([\s\S]*?)(\s*)<\/abbr>/gi, replaceTagAndAttr( '[]{}' ) )
+    .replace( /<a.*?href=[""'](.*?)[""'].*?>(\s*)([\s\S]*?)(\s*)<\/a>/gim, replaceTagAndAttr( '[]()' ) )
+    .replace( /<strike>(\s*)([\s\S]*?)(\s*)<\/strike>/gi, replaceTag( '~~' ) )
+    .replace( /<strong>(\s*)([\s\S]*?)(\s*)<\/strong>/gi, replaceTag( '**' ) )
+    .replace( /<b>(\s*)([\s\S]*?)(\s*)<\/b>/gi, replaceTag( '**' ) )
+    .replace( /<em>(\s*)([\s\S]*?)(\s*)<\/em>/gi, replaceTag( '_' ) )
+    .replace( /<i>(\s*)([\s\S]*?)(\s*)<\/i>/gi, replaceTag( '_' ) );
+
+  return content;
+
+};
+
+var convertNewlinesTags = function ( content ) {
 
   // Do our generic stripping out
-  markdown = markdown.replace(/([^<>]+)(<div>)/g,"$1\n$2")                                 // Divitis style line breaks (handle the first line)
-                 .replace(/<div><div>/g,'\n<div>')                                         // ^ (double opening divs with one close from Chrome)
-                 .replace(/(?:<div>)([^<>]+)(?:<div>)/g,"$1\n")                            // ^ (handle nested divs that start with content)
-                 .replace(/(?:<div>)(?:<br>)?([^<>]+)(?:<br>)?(?:<\/div>)/g,"$1\n")        // ^ (handle content inside divs)
-                 .replace(/<\/p>/g,"\n\n")                                               // P tags as line breaks
-                 .replace(/<(.)?br(.)?>/g,"\n")                                            // Convert normal line breaks
-                 .replace(/&lt;/g,"<").replace(/&gt;/g,">");                                 // Encoding
+  content = content
+    .replace( /([^<>]+)(<div>)/g, '$1\n$2' )                               // Divitis style line breaks (handle the first line)
+    .replace( /<div><div>/g, '\n<div>' )                                   // ^ (double opening divs with one close from Chrome)
+    .replace( /(?:<div>)([^<>]+)(?:<div>)/g, '$1\n' )                      // ^ (handle nested divs that start with content)
+    .replace( /(?:<div>)(?:<br>)?([^<>]+)(?:<br>)?(?:<\/div>)/g, '$1\n' )  // ^ (handle content inside divs)
+    .replace( /<\/p>/g, '\n\n' )                                           // P tags as line breaks
+    .replace( /<br>/g, '\n' );                                             // Convert normal line breaks
 
-  // Use custom block toMarkdown functions (if any exist)
-  var block;
-  if (Blocks.hasOwnProperty(type)) {
-    block = Blocks[type];
-    // Do we have a toMarkdown function?
-    if (!_.isUndefined(block.prototype.toMarkdown) && _.isFunction(block.prototype.toMarkdown)) {
-      markdown = block.prototype.toMarkdown(markdown);
-    }
+  return content;
+
+};
+
+var applyFormattersCustomFormatting = function ( content ) {
+
+  var Formatters = require( './formatters' ); // intentionally deferring, circular dependency
+
+  var formatName, format;
+
+  for ( formatName in Formatters) {
+
+    if ( ! Formatters.hasOwnProperty( formatName ) ) { continue; }
+
+    format = Formatters[ formatName ];
+
+    if ( ! _.isFunction( format.toMarkdown ) ) { continue; }
+
+    content = format.toMarkdown( content );
+
   }
 
-  // Strip remaining HTML
-  markdown = markdown.replace(/<\/?[^>]+(>|$)/g, "");
+  return content;
+
+};
+
+var applyBlockCustomFormatting = function ( content, type ) {
+
+  var Blocks = require( './blocks' ); // intentionally deferring, circular dependency
+
+  if ( ! Blocks.hasOwnProperty( type ) ) { return content; }
+
+  var block = Blocks[ type ];
+
+  if ( ! _.isFunction( block.prototype.toMarkdown ) ) { return content; }
+
+  content = block.prototype.toMarkdown( content );
+
+  return content;
+
+};
+
+var removeRemainingTags = function ( content ) {
+
+  content = content.replace( /<\/?[^>]+>/g, '' );
+
+  return content;
+
+};
+
+var CHANGES = [
+
+  normalizeWhitespaces,
+
+  normalizeBrTags,
+  
+  removeBadThings,
+  
+  removeEmptyTags,
+
+  escapeMarkdownChars,
+  
+  convertInlineTags,
+
+  convertNewlinesTags,
+
+  applyFormattersCustomFormatting,
+
+  applyBlockCustomFormatting,
+
+  removeRemainingTags
+
+];
+
+module.exports = function ( html, type ) {
+
+  type = utils.classify( type );
+
+  var markdown = html;
+
+  for ( var i = 0; i < CHANGES.length; i++ ) {
+
+    markdown = CHANGES[ i ]( markdown, type );
+
+  }
 
   return markdown;
+
 };

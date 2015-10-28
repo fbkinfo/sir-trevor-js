@@ -1,100 +1,176 @@
-"use strict";
+'use strict';
 
-var _ = require('./lodash');
-var utils = require('./utils');
+var _ = require( './lodash' );
+var utils = require( './utils' );
 
-module.exports = function(markdown, type) {
 
-  // Deferring requiring these to sidestep a circular dependency:
-  // Block -> this -> Blocks -> Block
-  var Blocks = require('./blocks');
-  var Formatters = require('./formatters');
+var startWrap = function ( content, type, shouldWrap ) {
 
-  // MD -> HTML
-  type = utils.classify(type);
+  if ( ! shouldWrap ) { return content; }
 
-  var html = markdown,
-      shouldWrap = type === "Text";
+  content = '<div>' + content;
 
-  if(_.isUndefined(shouldWrap)) { shouldWrap = false; }
+  return content;
 
-  if (shouldWrap) {
-    html = "<div>" + html;
-  }
+};
 
-  html = html.replace(/\[([^\]]+)\]\(([^\)]+)\)/gm,function(match, p1, p2){
-    return "<a href='"+p2+"'>"+p1.replace(/\n/g, '')+"</a>";
-  });
+var convertInlineTags = function ( content ) {
 
-  html = html.replace(/\[([^\]]+)\]\{([^\}]+)\}/gm,function(match, p1, p2){
-    return "<abbr title='"+p2+"'>" + p1.replace(/\n/g, '')+"</abbr>";
-  });
+  var replaceTagAndAttr = function ( tag, attr ) {
 
-  // This may seem crazy, but because JS doesn't have a look behind,
-  // we reverse the string to regex out the italic items (and bold)
-  // and look for something that doesn't start (or end in the reversed strings case)
-  // with a slash.
-  html = utils.reverse(
-           utils.reverse(html)
-           .replace(/_(?!\\)((_\\|[^_])*)_(?=$|[^\\])/gm, function(match, p1) {
-              return ">i/<"+ p1.replace(/\n/g, '').replace(/[\s]+$/,'') +">i<";
-           })
-           .replace(/~~(?!\\)((~~\\|[^~~])*)~~(?=$|[^\\])/gm, function(match, p1){
-              return ">ekirts/<"+ p1.replace(/\r?\n/g, '').replace(/[\s]+$/,'') +">ekirts<";
-           })
-           .replace(/\*\*(?!\\)((\*\*\\|[^\*\*])*)\*\*(?=$|[^\\])/gm, function(match, p1){
-              return ">b/<"+ p1.replace(/\n/g, '').replace(/[\s]+$/,'') +">b<";
-           })
-          );
+    return function ( match, pText, pAttr ) {
 
-  html =  html.replace(/^\> (.+)$/mg,"$1");
+      return '<' + tag + ' ' + attr + "='" + pAttr + "'>" + pText.trim().replace( /\n/g, '<br>' ) + '</' + tag + '>';
 
-  // Use custom formatters toHTML functions (if any exist)
+    };
+
+  };
+
+  var replaceTag = function ( tag ) {
+
+    return function ( match, pBefore, pText ) {
+
+      return pBefore + '<' + tag + '>' + pText.trim().replace( /\n/g, '<br>' ) + '</' + tag + '>±§';
+
+    };
+
+  };
+
+  content = content
+    .replace( /\[((?:\\\]|[^\]])+)\]\(([^\)]+)\)/g, replaceTagAndAttr( 'a', 'href' ) )
+    .replace( /\[((?:\\\]|[^\]])+)\]\{([^\}]+)\}/g, replaceTagAndAttr( 'abbr', 'title' ) )
+    .replace( /(^|[^\\])_((?:\\_|[^_])*[^_\\])(?=_)/g, replaceTag( 'i' )  ).replace( /\>±§_/g, '>' )
+    .replace( /(^|[^\\])\*\*((?:\\\*|[^*])+)\*(?=\*)/g, replaceTag( 'b' ) ).replace( /\>±§\*/g, '>' )
+    .replace( /(^|[^\\])~~((?:\\~|[^~])+)~(?=~)/g, replaceTag( 'strike' ) ).replace( /\>±§~/g, '>' )
+    .replace( /^\> (.+)$/mg, '$1' );
+
+  return content;
+
+};
+
+var applyFormattersCustomFormatting = function ( content ) {
+
+  var Formatters = require( './formatters' ); // intentionally deferring, circular dependency
+
   var formatName, format;
-  for(formatName in Formatters) {
-    if (Formatters.hasOwnProperty(formatName)) {
-      format = Formatters[formatName];
-      // Do we have a toHTML function?
-      if (!_.isUndefined(format.toHTML) && _.isFunction(format.toHTML)) {
-        html = format.toHTML(html);
-      }
-    }
+
+  for ( formatName in Formatters) {
+
+    if ( ! Formatters.hasOwnProperty( formatName ) ) { continue; }
+
+    format = Formatters[ formatName ];
+
+    if ( ! _.isFunction( format.toHTML ) ) { continue; }
+
+    content = format.toHTML( content );
+
   }
 
-  // Use custom block toHTML functions (if any exist)
-  var block;
-  if (Blocks.hasOwnProperty(type)) {
-    block = Blocks[type];
-    // Do we have a toHTML function?
-    if (!_.isUndefined(block.prototype.toHTML) && _.isFunction(block.prototype.toHTML)) {
-      html = block.prototype.toHTML(html);
-    }
-  }
+  return content;
 
-  if (shouldWrap) {
-    html = html.replace(/\n\n/gm, "</div><div><br></div><div>");
-    html = html.replace(/\n/gm, "</div><div>");
-  }
+};
 
-  html = html.replace(/\t/g, "&nbsp;&nbsp;&nbsp;&nbsp;")
-             .replace(/\n/g, "<br>")
-             .replace(/~~/, "")
-             .replace(/\*\*/, "")
-             .replace(/__/, "");  // Cleanup any markdown characters left
+var applyBlockCustomFormatting = function ( content, type ) {
 
-  // Replace escaped
-  html = html.replace(/\\\*/g, "*")
-             .replace(/\\\[/g, "[")
-             .replace(/\\\]/g, "]")
-             .replace(/\\\_/g, "_")
-             .replace(/\\\(/g, "(")
-             .replace(/\\\)/g, ")")
-             .replace(/\\\-/g, "-")
-             .replace(/\\~/g, "~");
+  var Blocks = require( './blocks' ); // intentionally deferring, circular dependency
 
-  if (shouldWrap) {
-    html += "</div>";
+  if ( ! Blocks.hasOwnProperty( type ) ) { return content; }
+
+  var block = Blocks[ type ];
+
+  if ( ! _.isFunction( block.prototype.toHTML ) ) { return content; }
+
+  content = block.prototype.toHTML( content );
+
+  return content;
+
+};
+
+var doNewlinesWrap = function ( content, type, shouldWrap ) {
+
+  if ( ! shouldWrap ) { return content; }
+
+  content = content
+    .replace( /\n\n/g, '</div><div><br></div><div>')
+    .replace( /\n/g, '</div><div>' );
+
+  return content;
+
+};
+
+var removeRemainingMarkdown = function ( content ) {
+
+  content = content
+    .replace( /\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;' )
+    .replace( /\n/g, '<br>' )
+    .replace( /~~/g, '' )
+    .replace( /\*\*/g, '' )
+    .replace( /__/g, '' );
+
+  return content;
+
+};
+
+var unescapeMarkdownChars = function ( content ) {
+
+  content = content
+    .replace( /\\\*/g, '*' )
+    .replace( /\\\[/g, '[' )
+    .replace( /\\\]/g, ']' )
+    .replace( /\\\_/g, '_' )
+    .replace( /\\\(/g, '(' )
+    .replace( /\\\)/g, ')' )
+    .replace( /\\\-/g, '-' )
+    .replace( /\\~/g, '~' );
+
+  return content;
+
+};
+
+var finishWrap = function ( content, type, shouldWrap ) {
+
+  if ( ! shouldWrap ) { return content; }
+
+  content = content + '</div>';
+
+  return content;
+
+};
+
+var CHANGES = [
+
+  startWrap,
+
+  convertInlineTags,
+
+  applyFormattersCustomFormatting,
+
+  applyBlockCustomFormatting,
+
+  doNewlinesWrap,
+
+  removeRemainingMarkdown,
+
+  unescapeMarkdownChars,
+
+  finishWrap
+
+];
+
+module.exports = function ( markdown, type ) {
+  
+  type = utils.classify( type );
+
+  var html = markdown;
+
+  var shouldWrap = type === 'Text';
+
+  for ( var i = 0; i < CHANGES.length; i++ ) {
+
+    html = CHANGES[ i ]( html, type, shouldWrap );
+
   }
 
   return html;
+
 };
