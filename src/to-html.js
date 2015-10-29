@@ -90,9 +90,21 @@ var doNewlinesWrap = function ( content, type, shouldWrap ) {
 
   if ( ! shouldWrap ) { return content; }
 
-  content = content
-    .replace( /\n\n/g, '</div><div><br></div><div>')
-    .replace( /\n/g, '</div><div>' );
+  content = content.replace( /\n{2,}/g, function ( match ) {
+
+    var result = '</div>';
+
+    for ( var i = 1; i < match.length; i++ ) {
+
+      result += '<div><br></div>';
+
+    }
+
+    result += '<div>';
+
+    return result;
+
+  } );
 
   return content;
 
@@ -131,7 +143,7 @@ var finishWrap = function ( content, type, shouldWrap ) {
 
   if ( ! shouldWrap ) { return content; }
 
-  content = content + '</div>';
+  content += '</div>';
 
   return content;
 

@@ -37,7 +37,7 @@ var removeBadThings = function ( content ) {
 
 var removeEmptyTags = function ( content ) {
 
-  content = content.replace( /<(\w+)(?:\s+\w+="[^"]+(?:"\$[^"]+"[^"]+)?")*>((?:\s*<br>\s*)*)*<\/\1>/gi, '$2' );
+  content = content.replace( /<(\w+)(?:\s+\w+="[^"]+(?:"\$[^"]+"[^"]+)?")*>((?:<br>|\s)*)<\/\1>/gi, '$2' );
 
   return content;
 
@@ -70,7 +70,7 @@ var convertInlineTags = function ( content ) {
 
     return function ( match, pAttr, pBefore, pText, pAfter ) { // jshint ignore:line
 
-      return openBody + pText.replace( /(^(?:<br>|\s)*|(?:<br>|\s)*$)/g, '' ).replace( /<br>/g, '\n' ) + closeBody + openData + pAttr + closeData;
+      return pBefore + openBody + pText + closeBody + openData + pAttr + closeData + pAfter;
 
     };
 
@@ -80,20 +80,20 @@ var convertInlineTags = function ( content ) {
 
     return function ( match, pBefore, pText, pAfter ) {
 
-      return mark + pText.replace( /(^(?:<br>|\s)*|(?:<br>|\s)*$)/g, '' ).replace( /<br>/g, '\n' ) + mark + pAfter;
+      return pBefore + mark + pText + mark + pAfter;
 
     };
 
   };
 
   content = content
-    .replace( /<abbr.*?title=[""'](.*?)[""'].*?>(\s*)([\s\S]*?)(\s*)<\/abbr>/gi, replaceTagAndAttr( '[]{}' ) )
-    .replace( /<a.*?href=[""'](.*?)[""'].*?>(\s*)([\s\S]*?)(\s*)<\/a>/gim, replaceTagAndAttr( '[]()' ) )
-    .replace( /<strike>(\s*)([\s\S]*?)(\s*)<\/strike>/gi, replaceTag( '~~' ) )
-    .replace( /<strong>(\s*)([\s\S]*?)(\s*)<\/strong>/gi, replaceTag( '**' ) )
-    .replace( /<b>(\s*)([\s\S]*?)(\s*)<\/b>/gi, replaceTag( '**' ) )
-    .replace( /<em>(\s*)([\s\S]*?)(\s*)<\/em>/gi, replaceTag( '_' ) )
-    .replace( /<i>(\s*)([\s\S]*?)(\s*)<\/i>/gi, replaceTag( '_' ) );
+    .replace( /<abbr.*?title=[""'](.*?)[""'].*?>((?:<br>|\s)*)([\s\S]*?)((?:<br>|\s)*)<\/abbr>/gi, replaceTagAndAttr( '[]{}' ) )
+    .replace( /<a.*?href=[""'](.*?)[""'].*?>((?:<br>|\s)*)([\s\S]*?)((?:<br>|\s)*)<\/a>/gim, replaceTagAndAttr( '[]()' ) )
+    .replace( /<strike>((?:<br>|\s)*)([\s\S]*?)((?:<br>|\s)*)<\/strike>/gi, replaceTag( '~~' ) )
+    .replace( /<strong>((?:<br>|\s)*)([\s\S]*?)((?:<br>|\s)*)<\/strong>/gi, replaceTag( '**' ) )
+    .replace( /<b>((?:<br>|\s)*)([\s\S]*?)((?:<br>|\s)*)<\/b>/gi, replaceTag( '**' ) )
+    .replace( /<em>((?:<br>|\s)*)([\s\S]*?)((?:<br>|\s)*)<\/em>/gi, replaceTag( '_' ) )
+    .replace( /<i>((?:<br>|\s)*)([\s\S]*?)((?:<br>|\s)*)<\/i>/gi, replaceTag( '_' ) );
 
   return content;
 
@@ -101,14 +101,14 @@ var convertInlineTags = function ( content ) {
 
 var convertNewlinesTags = function ( content ) {
 
-  // Do our generic stripping out
   content = content
-    .replace( /([^<>]+)(<div>)/g, '$1\n$2' )                               // Divitis style line breaks (handle the first line)
-    .replace( /<div><div>/g, '\n<div>' )                                   // ^ (double opening divs with one close from Chrome)
-    .replace( /(?:<div>)([^<>]+)(?:<div>)/g, '$1\n' )                      // ^ (handle nested divs that start with content)
-    .replace( /(?:<div>)(?:<br>)?([^<>]+)(?:<br>)?(?:<\/div>)/g, '$1\n' )  // ^ (handle content inside divs)
-    .replace( /<\/p>/g, '\n\n' )                                           // P tags as line breaks
-    .replace( /<br>/g, '\n' );                                             // Convert normal line breaks
+    .replace( /([^>])<div>/g, '$1\n' )
+    .replace( /([^>])<p>/g, '$1\n\n' )
+    .replace( /(<br>)?<\/div>/g, '\n' )
+    .replace( /(<br>)?<\/p>/g, '\n\n' )
+    .replace( /<br>/g, '\n' )
+    .replace( /<\/?(div|p)>/g, '' )
+    .replace( /(^\s+|\s+$)/, '' );
 
   return content;
 
