@@ -37,7 +37,7 @@ var removeBadThings = function ( content ) {
 
 var removeEmptyTags = function ( content ) {
 
-  content = content.replace( /<(\w+)(?:\s+\w+="[^"]+(?:"\$[^"]+"[^"]+)?")*>((?:<br>|\s)*)<\/\1>/gi, '$2' );
+  content = content.replace( /<(\w+)(?:\s+\w+="[^"]+")*>((?:<br>|\s)*)<\/\1>/gi, '$2' );
 
   return content;
 
@@ -86,9 +86,11 @@ var convertInlineTags = function ( content ) {
 
   };
 
+  content = content.replace( /<(i|b|em|strong|strike)(?:\s+\w+="[^"]+")+>/gi, '<$1>' );
+
   content = content
-    .replace( /<abbr.*?title=[""'](.*?)[""'].*?>((?:<br>|\s)*)([\s\S]*?)((?:<br>|\s)*)<\/abbr>/gi, replaceTagAndAttr( '[]{}' ) )
-    .replace( /<a.*?href=[""'](.*?)[""'].*?>((?:<br>|\s)*)([\s\S]*?)((?:<br>|\s)*)<\/a>/gim, replaceTagAndAttr( '[]()' ) )
+    .replace( /<abbr.*?title=["'](.*?)["'].*?>((?:<br>|\s)*)([\s\S]*?)((?:<br>|\s)*)<\/abbr>/gi, replaceTagAndAttr( '[]{}' ) )
+    .replace( /<a.*?href=["'](.*?)["'].*?>((?:<br>|\s)*)([\s\S]*?)((?:<br>|\s)*)<\/a>/gim, replaceTagAndAttr( '[]()' ) )
     .replace( /<strike>((?:<br>|\s)*)([\s\S]*?)((?:<br>|\s)*)<\/strike>/gi, replaceTag( '~~' ) )
     .replace( /<strong>((?:<br>|\s)*)([\s\S]*?)((?:<br>|\s)*)<\/strong>/gi, replaceTag( '**' ) )
     .replace( /<b>((?:<br>|\s)*)([\s\S]*?)((?:<br>|\s)*)<\/b>/gi, replaceTag( '**' ) )
