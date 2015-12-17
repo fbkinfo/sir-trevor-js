@@ -21,17 +21,22 @@ module.exports = Block.extend({
   },
 
   loadData: function(data){
-    this.getTextBlock().html("<ul>" + stToHTML(data.text, this.type) + "</ul>");
+    this.getTextBlock().html('<ul>' + stToHTML(data.text, this.type) + '</ul>');
   },
 
   onBlockRender: function() {
-    this.checkForList = this.checkForList.bind(this);
-    this.getTextBlock().on('click keyup focus', this.checkForList);
-    this.getTextBlock().on('keydown',this.handleShiftEnter.bind(this));
+    this.getTextBlock().on('click keyup focus', this.checkForList.bind(this));
+    this.getTextBlock().on('keydown', this.handleEnter.bind(this));
   },
 
-  handleShiftEnter: function(event) {
-    if ( ! ( event.keyCode === 13 && event.shiftKey ) ) { return; }
+  checkForList: function() {
+    if (this.$('ul').length === 0) {
+      document.execCommand('insertUnorderedList', false, false);
+    }
+  },
+
+  handleEnter: function(event) {
+    if ( ! ( event.keyCode === 13 ) ) { return; }
     event.preventDefault();
     event.stopPropagation();
     if ( this.isEmpty() ) { return; }
@@ -42,28 +47,25 @@ module.exports = Block.extend({
     newLi.caretToStart();
   },
 
-  checkForList: function() {
-    if (this.$('ul').length === 0) {
-      document.execCommand("insertUnorderedList", false, false);
-    }
-  },
-
   toMarkdown: function(markdown) {
-    return markdown.replace(/<\/li>/mg,"\n")
-                   .replace(/<\/?[^>]+(>|$)/g, "")
-                   .replace(/^(.+)$/mg," - $1");
+    markdown = markdown
+      .replace(/<\/li>/mg, '\n')
+      .replace(/<.+?>/g, '')
+      .replace(/^(.+)$/mg, ' - $1');
+
+    return markdown;
   },
 
   toHTML: function(html) {
-    html = html.replace(/^ - (.+)$/mg,"<li>$1</li>")
-               .replace(/\n/mg, "");
+    html = html
+      .replace(/^ - (.+)$/mg, '<li>$1</li>')
+      .replace(/\n/mg, '');
 
     return html;
   },
 
   onContentPasted: function(event, target) {
-    this.$('ul').html(
-      this.pastedMarkdownToHTML(target[0].innerHTML));
+    this.$('ul').html(this.pastedMarkdownToHTML(target[0].innerHTML));
     this.getTextBlock().caretToEnd();
   },
 
