@@ -6,7 +6,7 @@ var $ = require('jquery');
 var Block = require('../block');
 var stToHTML = require('../to-html');
 
-var template = '<div class="st-text-block st-required" contenteditable="true"><ul><li></li></ul></div>';
+var template = '<div class="st-text-block st-type-list st-required" contenteditable="true"><ul><li><br/></li></ul></div>';
 
 module.exports = Block.extend({
 
@@ -31,19 +31,26 @@ module.exports = Block.extend({
 
   checkForList: function() {
     if (this.$('ul').length === 0) {
+      this.getTextBlock().empty();
       document.execCommand('insertUnorderedList', false, false);
     }
   },
 
   handleEnter: function(event) {
-    if ( ! ( event.keyCode === 13 ) ) { return; }
+    if (event.keyCode !== 13) {
+      return;
+    }
     event.preventDefault();
     event.stopPropagation();
-    if ( this.isEmpty() ) { return; }
-    if ( ! window.getSelection ) { return; }
-    var currentLi = $( window.getSelection().getRangeAt( 0 ).startContainer ).closest( 'li' );
-    var newLi = $( '<li>' );
-    newLi.insertAfter( currentLi );
+    if (this.isEmpty()) {
+      return;
+    }
+    if (!window.getSelection) {
+      return;
+    }
+    var currentLi = $(window.getSelection().getRangeAt(0).startContainer).closest('li');
+    var newLi = $('<li><br/></li>');
+    newLi.insertAfter(currentLi);
     newLi.caretToStart();
   },
 
