@@ -48,14 +48,14 @@ describe("toMarkdown", function(){
     var html = "<p>testing</p>",
         markdown = SirTrevor.toMarkdown(html, "Text");
 
-    expect(markdown).toBe("testing\n\n");
+    expect(markdown).toBe("testing");
   });
 
   it("converts br's to newlines", function(){
     var html = "testing<br>",
         markdown = SirTrevor.toMarkdown(html, "Text");
 
-    expect(markdown).toBe("testing\n");
+    expect(markdown).toBe("testing");
   });
 
   it("removes comments", function(){
@@ -83,14 +83,14 @@ describe("toMarkdown", function(){
     var html = "<b><br></b>",
         markdown = SirTrevor.toMarkdown(html, "Text");
 
-    expect(markdown).toBe("\n");
+    expect(markdown).toBe("");
   });
 
   it("cleans up br's inside of italics", function(){
     var html = "<i><br></i>",
         markdown = SirTrevor.toMarkdown(html, "Text");
 
-    expect(markdown).toBe("\n");
+    expect(markdown).toBe("");
   });
 
   it("removes font tags, but leaves content", function(){
@@ -104,7 +104,7 @@ describe("toMarkdown", function(){
     var html = "<p><a href=\"#\">Hello</a> this is my <strong>amazing <em>piece</em></strong> <em>I think</em> that <strong>it should</strong> be able to be convereted correctly.</p>",
         markdown = SirTrevor.toMarkdown(html, "Text");
 
-    expect(markdown).toBe("[Hello](#) this is my **amazing _piece_** _I think_ that **it should** be able to be convereted correctly.\n\n");
+    expect(markdown).toBe("[Hello](#) this is my **amazing _piece_** _I think_ that **it should** be able to be convereted correctly.");
   });
 
   it("correctly encodes * characters", function(){
